@@ -42,7 +42,7 @@ A model or integration boundary alone does not complete these features. Do not m
 
 ## Exact continuation
 
-1. Read this file, validation evidence, root/app READMEs and applicable AGENTS instructions. Inspect Git status; preserve this implementation. Use the existing isolated checkout; do not create a worktree unless requested. The original remote was empty and this source has not been pushed.
+1. Read this file, validation evidence, root/app READMEs and applicable AGENTS instructions. Inspect Git status; preserve this implementation. Use the existing isolated checkout; do not create a worktree unless requested. The original remote was empty; the implementation is now on the GitHub `venuevista-mvp` delivery branch.
 2. Initialize the cloud shell from README. Run `pnpm install --frozen-lockfile`, `pnpm setup:local` and `pnpm db:test:prepare` as needed. Preserve private configuration/data. Restart processes after snapshot restoration.
 3. Run `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test:integration` and relevant builds. Inspect actual skip counts. Start the browser-export services and run `pnpm test:e2e` for cross-app changes. Use disposable test databases only.
 4. Complete each remaining feature across UI, validation, authorization, persistence and meaningful tests. Keep synthetic fixtures labelled and out of production inventory.

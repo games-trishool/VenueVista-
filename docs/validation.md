@@ -1,6 +1,6 @@
 # Validation evidence
 
-Checks ran in the actual cloud workspace on2026-10-25. Source is in `/workspace/VenueVista-`. The initial remote was empty; no existing application was overwritten. Source has not been pushed, deployed or published.
+Checks ran in the actual cloud workspace on2026-10-25. Source is in `/workspace/VenueVista-`. The initial remote was empty; no existing application was overwritten. Source is available on the GitHub `venuevista-mvp` branch for ZIP download. No application has been deployed or environment published.
 
 ## Executed checks
 
