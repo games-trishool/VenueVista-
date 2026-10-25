@@ -1,0 +1,12 @@
+node_modules
+pnpm-lock.yaml
+.next
+.expo
+dist
+coverage
+*.png
+*.jpg
+*.jpeg
+
+**/next-env.d.ts
+**/expo-env.d.ts

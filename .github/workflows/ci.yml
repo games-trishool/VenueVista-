@@ -1,0 +1,57 @@
+name: VenueVista checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: venuevista
+          POSTGRES_PASSWORD: isolated-ci-password
+          POSTGRES_DB: venuevista_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U venuevista -d venuevista_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://venuevista:isolated-ci-password@127.0.0.1:5432/venuevista_test?schema=public
+      TEST_DATABASE_URL: postgresql://venuevista:isolated-ci-password@127.0.0.1:5432/venuevista_test?schema=public
+      AUTH_JWT_SECRET: isolated-ci-only-signing-secret-never-use-outside-tests
+      ENABLE_DEV_AUTH: 'true'
+      ENABLE_INTEGRATION_TESTS: 'true'
+      ADMIN_ENABLE_DEV_AUTH: 'false'
+      EXPO_PUBLIC_ENABLE_DEV_AUTH: 'false'
+      API_URL: http://127.0.0.1:4000/api/v1
+      EXPO_PUBLIC_API_URL: http://127.0.0.1:4000/api/v1
+      NEXT_TELEMETRY_DISABLED: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma and apply migrations
+        run: pnpm db:generate && pnpm db:migrate
+      - name: Static checks
+        run: pnpm typecheck && pnpm lint
+      - name: Tests including real-database integration
+        run: pnpm test
+      - name: Build applications
+        run: pnpm build

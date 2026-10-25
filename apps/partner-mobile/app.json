@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "VenueVista Partner",
+    "slug": "venuevista-partner",
+    "scheme": "venuevista-partner",
+    "version": "0.1.0",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.venuevista.partner",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.venuevista.partner",
+      "adaptiveIcon": {
+        "backgroundColor": "#111015",
+        "foregroundImage": "./assets/adaptive-icon.png"
+      },
+      "permissions": [],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "name": "VenueVista Partner"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose photographs of your venue to upload with your listing.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#111015"
+    }
+  }
+}

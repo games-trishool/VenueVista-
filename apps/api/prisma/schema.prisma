@@ -1,0 +1,498 @@
+generator client {
+  provider = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  OWNER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum OrganizationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum VenueStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum EnquiryStatus {
+  NEW
+  VIEWED
+  RESPONDED
+  QUOTE_SENT
+  SITE_VISIT_SCHEDULED
+  NEGOTIATING
+  CONFIRMED
+  CANCELLED
+  CLOSED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  TENTATIVE
+  NOT_CONFIRMED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum SiteVisitStatus {
+  PROPOSED
+  ACCEPTED
+  CANCELLED
+  COMPLETED
+}
+
+model User {
+  id            String     @id @default(uuid()) @db.Uuid
+  firebaseUid   String?    @unique
+  phone         String?    @unique
+  displayName   String
+  role          Role       @default(CUSTOMER)
+  status        UserStatus @default(ACTIVE)
+  isDevelopment Boolean    @default(false)
+  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
+  deletedAt     DateTime?  @db.Timestamptz(3)
+  profile       UserProfile?
+  organizations Organization[]
+  memberships   OrganizationMember[]
+  venues        Venue[]
+  wishlists     Wishlist[]
+  enquiries     Enquiry[]
+  messages      EnquiryMessage[]
+  quotes        Quote[]
+  bookings      Booking[]
+  reviews       Review[]
+  notifications Notification[]
+  verifications VerificationRequest[]
+  auditLogs     AuditLog[]
+
+  @@index([role, status])
+}
+
+model UserProfile {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  avatarUrl String?
+  city      String?
+  state     String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Organization {
+  id           String             @id @default(uuid()) @db.Uuid
+  ownerId      String             @db.Uuid
+  name         String
+  phone        String?
+  address      String?
+  businessId   String?
+  status       OrganizationStatus @default(PENDING)
+  reviewReason String?
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
+  deletedAt    DateTime?          @db.Timestamptz(3)
+  owner        User               @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  members      OrganizationMember[]
+  venues       Venue[]
+  verifications VerificationRequest[]
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model OrganizationMember {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  userId         String       @db.Uuid
+  role           String       @default("MANAGER")
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime     @updatedAt @db.Timestamptz(3)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Venue {
+  id                   String      @id @default(uuid()) @db.Uuid
+  ownerId              String      @db.Uuid
+  organizationId       String?     @db.Uuid
+  name                 String
+  description          String
+  category             String
+  status               VenueStatus @default(DRAFT)
+  rejectionReason      String?
+  featured             Boolean     @default(false)
+  isDevelopment        Boolean     @default(false)
+  city                 String
+  state                String
+  district             String?
+  locality             String
+  pincode              String
+  address              String
+  latitude             Float
+  longitude            Float
+  location             Unsupported("geography(Point,4326)")?
+  seatingCapacity      Int
+  diningCapacity       Int
+  standingCapacity     Int         @default(0)
+  halls                Int         @default(1)
+  guestRooms           Int         @default(0)
+  parkingCapacity      Int         @default(0)
+  bikeParkingCapacity  Int         @default(0)
+  rentalPricePaise      Int
+  halfDayPricePaise     Int?
+  cateringPricePaise    Int?
+  decorationPricePaise  Int?
+  securityDepositPaise  Int?
+  additionalCharges    String?
+  amenities            String[]    @default([])
+  eventTypes           String[]    @default([])
+  bookingPolicy        String?
+  cancellationPolicy   String?
+  restrictions         String?
+  contactPhone         String?
+  whatsappPhone        String?
+  website              String?
+  videoUrl             String?
+  viewCount            Int         @default(0)
+  createdAt            DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime    @updatedAt @db.Timestamptz(3)
+  deletedAt            DateTime?   @db.Timestamptz(3)
+  owner                User        @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  organization         Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  spaces               VenueSpace[]
+  media                VenueMedia[]
+  pricing              VenuePricing[]
+  packages             VenuePackage[]
+  policy               VenuePolicy?
+  availability         VenueAvailability[]
+  blocks               VenueBlock[]
+  enquiries            Enquiry[]
+  wishlists            Wishlist[]
+  reviews              Review[]
+  bookings             Booking[]
+
+  @@index([city, status, deletedAt])
+  @@index([status, featured, createdAt])
+  @@index([ownerId])
+  @@index([organizationId])
+  @@index([category, rentalPricePaise])
+  @@index([location], type: Gist)
+}
+
+model VenueSpace {
+  id                String    @id @default(uuid()) @db.Uuid
+  venueId           String    @db.Uuid
+  name              String
+  seatingCapacity   Int
+  diningCapacity    Int
+  standingCapacity  Int       @default(0)
+  rentalPricePaise   Int
+  amenities         String[]  @default([])
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt         DateTime? @db.Timestamptz(3)
+  venue             Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  enquiries         Enquiry[]
+  availability      VenueAvailability[]
+  blocks            VenueBlock[]
+  bookings          Booking[]
+
+  @@index([venueId])
+  @@unique([venueId, name])
+  @@unique([id, venueId])
+}
+
+model VenueMedia {
+  id           String   @id @default(uuid()) @db.Uuid
+  venueId      String   @db.Uuid
+  url          String
+  storageKey   String?  @unique
+  mimeType     String   @default("image/jpeg")
+  originalName String?
+  kind         String   @default("IMAGE")
+  caption      String?
+  isCover      Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  venue        Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId, sortOrder])
+}
+
+model VenuePricing {
+  id          String   @id @default(uuid()) @db.Uuid
+  venueId     String   @db.Uuid
+  kind        String
+  amountPaise Int
+  unit        String   @default("PER_DAY")
+  description String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+}
+
+model VenuePackage {
+  id          String   @id @default(uuid()) @db.Uuid
+  venueId     String   @db.Uuid
+  name        String
+  description String
+  amountPaise Int
+  inclusions  String[] @default([])
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  venue       Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+}
+
+model VenuePolicy {
+  id           String   @id @default(uuid()) @db.Uuid
+  venueId      String   @unique @db.Uuid
+  bookingRules String
+  cancellation String
+  restrictions String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  venue        Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+}
+
+model VenueAvailability {
+  id        String             @id @default(uuid()) @db.Uuid
+  venueId   String             @db.Uuid
+  spaceId   String?            @db.Uuid
+  date      DateTime           @db.Date
+  status    AvailabilityStatus @default(NOT_CONFIRMED)
+  note      String?
+  createdAt DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime           @updatedAt @db.Timestamptz(3)
+  venue     Venue              @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  space     VenueSpace?        @relation(fields: [spaceId, venueId], references: [id, venueId], onDelete: Cascade)
+
+  @@unique([venueId, spaceId, date])
+  @@index([venueId, date, status])
+  @@index([spaceId, date])
+}
+
+model VenueBlock {
+  id        String    @id @default(uuid()) @db.Uuid
+  venueId   String    @db.Uuid
+  spaceId   String?   @db.Uuid
+  startsAt  DateTime  @db.Timestamptz(3)
+  endsAt    DateTime  @db.Timestamptz(3)
+  tentative Boolean   @default(false)
+  note      String?
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  venue     Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  space     VenueSpace? @relation(fields: [spaceId, venueId], references: [id, venueId], onDelete: Cascade)
+
+  @@index([venueId, startsAt, endsAt])
+  @@index([spaceId, startsAt])
+}
+
+model Wishlist {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  venueId   String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venue     Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, venueId])
+  @@index([userId, createdAt])
+}
+
+model Enquiry {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String        @db.Uuid
+  venueId        String        @db.Uuid
+  spaceId        String?       @db.Uuid
+  eventDate      DateTime      @db.Date
+  eventType      String
+  guestCount     Int
+  budgetPaise    Int?
+  requirements   String        @default("")
+  status         EnquiryStatus @default(NEW)
+  idempotencyKey String?
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  venue          Venue         @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  space          VenueSpace?   @relation(fields: [spaceId, venueId], references: [id, venueId], onDelete: Restrict)
+  messages       EnquiryMessage[]
+  quotes         Quote[]
+  siteVisits     SiteVisit[]
+  booking        Booking?
+
+  @@unique([userId, idempotencyKey])
+  @@index([venueId, status, createdAt])
+  @@index([userId, createdAt])
+  @@index([eventDate])
+}
+
+model EnquiryMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  enquiryId String   @db.Uuid
+  authorId  String   @db.Uuid
+  body      String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  enquiry   Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([enquiryId, createdAt])
+}
+
+model Quote {
+  id          String    @id @default(uuid()) @db.Uuid
+  enquiryId   String    @db.Uuid
+  authorId    String    @db.Uuid
+  amountPaise Int
+  description String
+  validUntil  DateTime? @db.Timestamptz(3)
+  acceptedAt  DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  enquiry     Enquiry   @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([enquiryId, createdAt])
+}
+
+model SiteVisit {
+  id          String          @id @default(uuid()) @db.Uuid
+  enquiryId   String          @db.Uuid
+  startsAt    DateTime        @db.Timestamptz(3)
+  status      SiteVisitStatus @default(PROPOSED)
+  note        String?
+  createdAt   DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime        @updatedAt @db.Timestamptz(3)
+  enquiry     Enquiry         @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+
+  @@index([enquiryId, startsAt])
+}
+
+model Booking {
+  id         String        @id @default(uuid()) @db.Uuid
+  enquiryId  String?       @unique @db.Uuid
+  venueId    String        @db.Uuid
+  spaceId    String        @db.Uuid
+  userId     String        @db.Uuid
+  startsAt   DateTime      @db.Timestamptz(3)
+  endsAt     DateTime      @db.Timestamptz(3)
+  status     BookingStatus @default(CONFIRMED)
+  confirmedAt DateTime    @default(now()) @db.Timestamptz(3)
+  createdAt  DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime      @updatedAt @db.Timestamptz(3)
+  enquiry    Enquiry?      @relation(fields: [enquiryId], references: [id], onDelete: Restrict)
+  venue      Venue         @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  space      VenueSpace    @relation(fields: [spaceId, venueId], references: [id, venueId], onDelete: Restrict)
+  user       User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([spaceId, startsAt, endsAt])
+  @@index([venueId, startsAt])
+  @@index([userId, createdAt])
+}
+
+model Review {
+  id         String    @id @default(uuid()) @db.Uuid
+  venueId    String    @db.Uuid
+  userId     String    @db.Uuid
+  rating     Int
+  body       String
+  published  Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt  DateTime? @db.Timestamptz(3)
+  venue      Venue     @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([venueId, userId])
+  @@index([venueId, published])
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime? @db.Timestamptz(3)
+  sentAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model VerificationRequest {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  organizationId String?   @db.Uuid
+  status         OrganizationStatus @default(PENDING)
+  details        Json
+  reason         String?
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([status, createdAt])
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model PlatformSetting {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
